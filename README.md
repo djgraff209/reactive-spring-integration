@@ -16,3 +16,7 @@ There are 5 total endpoints in use
 ## Flow Diagram
 
 ![Integration Flow Diagram](https://github.com/djgraff209/reactive-spring-integration/blob/master/doc/Integration%20Flow.drawio.png?raw=true)
+
+## The Issue
+
+The problem I'm encountering is that making the calls out for the secondary information to enrich the content are stalling out and there does not seem to be a way around it.
