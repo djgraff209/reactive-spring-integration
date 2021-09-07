@@ -15,4 +15,4 @@ There are 5 total endpoints in use
 
 ## Flow Diagram
 
-![Integration Flow Diagram](./doc/Integration Flow.drawio.png)
+![Integration Flow Diagram](doc/Integration\ Flow.drawio.png)
