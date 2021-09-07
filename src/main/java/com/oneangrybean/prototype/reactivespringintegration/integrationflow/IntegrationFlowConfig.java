@@ -31,20 +31,17 @@ public class IntegrationFlowConfig {
 
     @Bean
     public IntegrationFlow readMyObject(final WebClient webClient) {
-        return f ->
-            f.log()
+        return f -> f
             .handle(
                 WebFlux.outboundGateway("http://localhost:8080/myobject", webClient)
                         .httpMethod(HttpMethod.GET)
                         .mappedResponseHeaders()
                         .expectedResponseType(String.class)
             )
-            .log()
             .transform(Transformers.fromJson())
             .transform("#jsonPath(payload, '$.value')")
             .split()
             .enrichHeaders(e -> e.headerExpression("myObjectId", "payload"))
-            .log()
             .handle(
                 WebFlux.outboundGateway("http://localhost:8080/myobject/{id}", webClient)
                         .httpMethod(HttpMethod.GET)
@@ -52,6 +49,7 @@ public class IntegrationFlowConfig {
                         .mappedResponseHeaders()
                         .expectedResponseType(String.class)
             )
+            .transform(Transformers.fromJson())
             .enrich( e -> e
                 .requestSubFlow(
                     sf -> sf.handle(
