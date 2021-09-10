@@ -1,6 +1,7 @@
 package com.oneangrybean.prototype.reactivespringintegration.integrationflow;
 
 import java.util.List;
+import java.util.concurrent.Executors;
 
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
@@ -41,6 +42,9 @@ public class IntegrationFlowConfig {
             .transform(Transformers.fromJson())
             .transform("#jsonPath(payload, '$.value')")
             .split()
+            // Executor first attempt
+            // Fails - blocks receving thread
+            // .channel(c -> c.executor(Executors.newCachedThreadPool()))
             .enrichHeaders(e -> e.headerExpression("myObjectId", "payload"))
             .handle(
                 WebFlux.outboundGateway("http://localhost:8080/myobject/{id}", webClient)
@@ -50,6 +54,9 @@ public class IntegrationFlowConfig {
                         .expectedResponseType(String.class)
             )
             .transform(Transformers.fromJson())
+            // Executor 2nd attempt
+            // Succeeds on both enrich calls subsequent
+            .channel(c -> c.executor(Executors.newCachedThreadPool()))
             .enrich( e -> e
                 .requestSubFlow(
                     sf -> sf.handle(
