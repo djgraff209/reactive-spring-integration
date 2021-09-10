@@ -41,6 +41,9 @@ public class IntegrationFlowConfig {
             .transform(Transformers.fromJson())
             .transform("#jsonPath(payload, '$.value')")
             .split()
+            // 4th Attempt - adding flux channel
+            // Fails - blocks receving thread
+            // .channel(c -> c.flux())
             .enrichHeaders(e -> e.headerExpression("myObjectId", "payload"))
             .handle(
                 WebFlux.outboundGateway("http://localhost:8080/myobject/{id}", webClient)
@@ -50,32 +53,42 @@ public class IntegrationFlowConfig {
                         .expectedResponseType(String.class)
             )
             .transform(Transformers.fromJson())
+            // Adding flux channel as per @artembilan
+            // FAILS - Blocks thread handling reply
+            // .channel(c -> c.flux())
             .enrich( e -> e
                 .requestSubFlow(
-                    sf -> sf.handle(
+                    sf -> sf
+                    // 2nd Attempt adding flux channel
+                    // Fails - blocks receiving thread
+                    // .channel(c -> c.flux())
+                    .handle(
                         WebFlux.outboundGateway("http://localhost:8080/myobject/{id}/secondary", webClient)
                             .httpMethod(HttpMethod.GET)
                             .uriVariable("id", "headers.myObjectId")
                             .mappedResponseHeaders()
                             .expectedResponseType(String.class)
                     )
+                    // 3rd Attempt adding flux channel
+                    // Fails - blocks receving thread
+                    // .channel(c -> c.flux())
                     .transform(Transformers.fromJson())
                 )
                 .propertyExpression("secondary", "payload.value")
             )
-            .enrich( e -> e
-                .requestSubFlow(
-                    sf -> sf.handle(
-                        WebFlux.outboundGateway("http://localhost:8080/myobject/{id}/tertiary", webClient)
-                            .httpMethod(HttpMethod.GET)
-                            .uriVariable("id", "headers.myObjectId")
-                            .mappedResponseHeaders()
-                            .expectedResponseType(String.class)
-                    )
-                    .transform(Transformers.fromJson())
-                )
-                .propertyExpression("tertiary", "payload.value")
-            )
+            // .enrich( e -> e
+            //     .requestSubFlow(
+            //         sf -> sf.handle(
+            //             WebFlux.outboundGateway("http://localhost:8080/myobject/{id}/tertiary", webClient)
+            //                 .httpMethod(HttpMethod.GET)
+            //                 .uriVariable("id", "headers.myObjectId")
+            //                 .mappedResponseHeaders()
+            //                 .expectedResponseType(String.class)
+            //         )
+            //         .transform(Transformers.fromJson())
+            //     )
+            //     .propertyExpression("tertiary", "payload.value")
+            // )
             .transform(Transformers.toJson())
             .aggregate()
             .logAndReply();
