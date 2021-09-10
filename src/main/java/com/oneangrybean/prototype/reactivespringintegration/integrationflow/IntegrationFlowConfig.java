@@ -8,7 +8,9 @@ import org.springframework.http.HttpMethod;
 import org.springframework.integration.annotation.Gateway;
 import org.springframework.integration.annotation.MessagingGateway;
 import org.springframework.integration.dsl.IntegrationFlow;
+import org.springframework.integration.dsl.Pollers;
 import org.springframework.integration.dsl.Transformers;
+import org.springframework.integration.scheduling.PollerMetadata;
 import org.springframework.integration.webflux.dsl.WebFlux;
 import org.springframework.messaging.handler.annotation.Payload;
 import org.springframework.web.reactive.function.client.WebClient;
@@ -29,6 +31,11 @@ public class IntegrationFlowConfig {
         public Mono<List<String>> readMyObjects();
     }
 
+    @Bean(name = PollerMetadata.DEFAULT_POLLER)
+    public PollerMetadata poller() {
+        return Pollers.fixedRate(250).get();
+    }
+    
     @Bean
     public IntegrationFlow readMyObject(final WebClient webClient) {
         return f -> f
@@ -41,6 +48,9 @@ public class IntegrationFlowConfig {
             .transform(Transformers.fromJson())
             .transform("#jsonPath(payload, '$.value')")
             .split()
+            // First attempt
+            // Fails blocks thread
+            // .channel( c -> c.queue() )
             .enrichHeaders(e -> e.headerExpression("myObjectId", "payload"))
             .handle(
                 WebFlux.outboundGateway("http://localhost:8080/myobject/{id}", webClient)
@@ -50,6 +60,9 @@ public class IntegrationFlowConfig {
                         .expectedResponseType(String.class)
             )
             .transform(Transformers.fromJson())
+            // Second attempt
+            // Succeeds
+            .channel( c -> c.queue() )
             .enrich( e -> e
                 .requestSubFlow(
                     sf -> sf.handle(
